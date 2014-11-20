@@ -4,7 +4,7 @@ cimport cython
 
 from scipy.special import ndtr, ndtri
 
-ctypedef numpy.float_t DTYPE_t
+ctypedef numpy.float64_t DTYPE_t
 
 cdf = ndtr
 ppf = ndtri
@@ -20,13 +20,13 @@ def gibbs_sampling(int n, numpy.ndarray[DTYPE_t, ndim=1] mean, numpy.ndarray[DTY
     """
 
     cdef int dim = mean.shape[0]
-    cdef numpy.ndarray samples = numpy.empty((n, dim), dtype=numpy.float)
-    cdef numpy.ndarray U = numpy.random.uniform(size=(burning+n*thinning, dim))
+    cdef numpy.ndarray[DTYPE_t, ndim=2] samples = numpy.empty((n, dim), dtype=numpy.float64)
+    cdef numpy.ndarray[DTYPE_t, ndim=2] U = numpy.random.uniform(size=(burning+n*thinning, dim))
 
-    cdef numpy.ndarray sd = numpy.empty(dim, dtype=numpy.float)
-    cdef numpy.ndarray P = numpy.empty((dim, dim-1), dtype=numpy.float)
-    cdef numpy.ndarray sigma = numpy.empty((dim-1, dim-1), dtype=numpy.float)
-    cdef numpy.ndarray sigma_i = numpy.empty(dim-1, dtype=numpy.float)
+    cdef numpy.ndarray[DTYPE_t, ndim=1] sd = numpy.empty(dim, dtype=numpy.float64)
+    cdef numpy.ndarray[DTYPE_t, ndim=2] P = numpy.empty((dim, dim-1), dtype=numpy.float64)
+    cdef numpy.ndarray[DTYPE_t, ndim=2] sigma = numpy.empty((dim-1, dim-1), dtype=numpy.float64)
+    cdef numpy.ndarray[DTYPE_t, ndim=1] sigma_i = numpy.empty(dim-1, dtype=numpy.float64)
     cdef int i, j    
     for i in xrange(dim):
         sigma = delete(delete(cov, i, axis=0), i, axis=1)
@@ -34,8 +34,8 @@ def gibbs_sampling(int n, numpy.ndarray[DTYPE_t, ndim=1] mean, numpy.ndarray[DTY
         P[i] = dot(sigma_i, numpy.linalg.inv(sigma))
         sd[i] = numpy.sqrt(cov[i, i] - dot(P[i], sigma_i))
 
-    cdef numpy.ndarray x = mean.copy()
-    cdef float mu_j, f_a, f_b
+    cdef numpy.ndarray[DTYPE_t, ndim=1] x = mean.copy()
+    cdef DTYPE_t mu_j, f_a, f_b
     for i in xrange(-burning, n*thinning):
         for j in xrange(dim):
             mu_j = mean[j] + dot(P[j][:j], x[:j] - mean[:j]) + dot(P[j][j:], x[j+1:] - mean[j+1:])
