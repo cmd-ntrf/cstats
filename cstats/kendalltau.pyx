@@ -3,7 +3,7 @@ cimport numpy as np
 
 cimport cython
 @cython.boundscheck(False)
-def kendalltau(np.ndarray x, np.ndarray y):
+def kendalltau(np.ndarray[np.float64_t, ndim=1] x, np.ndarray[np.float64_t, ndim=1] y):
     """
     Calculates Kendall's tau, a correlation measure for ordinal data.
 
@@ -14,7 +14,7 @@ def kendalltau(np.ndarray x, np.ndarray y):
 
     Parameters
     ----------
-    x, y : numpy.array
+    x, y : np.array
         Arrays of rankings, of the same shape. If arrays are not 1-D, they will
         be flattened to 1-D.
 
@@ -49,52 +49,14 @@ def kendalltau(np.ndarray x, np.ndarray y):
     -0.47140452079103173
 
     """
-    cdef int n = np.int64(len(x))
-    temp = list(range(n))  # support structure used by mergesort
+    cdef long first, t, i, exchanges, u, v, tot
+    cdef np.float64_t tau, denom
+    cdef long n = len(x)
+    cdef np.ndarray[long, ndim=1] perm = np.lexsort((y, x))
+    cdef np.ndarray[long, ndim=1] temp = np.arange(n)  # support structure used by mergesort
     # this closure recursively sorts sections of perm[] by comparing
     # elements of y[perm[]] using temp[] as support
     # returns the number of swaps required by an equivalent bubble sort
-
-    def mergesort(int offs, int length):
-        cdef int exchcnt = 0
-        if length == 1:
-            return 0
-        if length == 2:
-            if y[perm[offs]] <= y[perm[offs+1]]:
-                return 0
-            t = perm[offs]
-            perm[offs] = perm[offs+1]
-            perm[offs+1] = t
-            return 1
-
-        cdef int length0, length1, middle
-
-        length0 = length // 2
-        length1 = length - length0
-        middle = offs + length0
-        exchcnt += mergesort(offs, length0)
-        exchcnt += mergesort(middle, length1)
-        if y[perm[middle - 1]] < y[perm[middle]]:
-            return exchcnt
-        # merging
-        i = j = k = 0
-        while j < length0 or k < length1:
-            if k >= length1 or (j < length0 and y[perm[offs + j]] <=
-                                                y[perm[middle + k]]):
-                temp[i] = perm[offs + j]
-                d = i - j
-                j += 1
-            else:
-                temp[i] = perm[middle + k]
-                d = (offs + i) - (middle + k)
-                k += 1
-            if d > 0:
-                exchcnt += d
-            i += 1
-        perm[offs:offs+length] = temp[0:length]
-        return exchcnt
-
-    perm = np.lexsort((y, x))
 
     # compute joint ties
     first = 0
@@ -115,7 +77,7 @@ def kendalltau(np.ndarray x, np.ndarray y):
     u += ((n - first) * (n - first - 1)) // 2
 
     # count exchanges
-    exchanges = mergesort(0, n)
+    exchanges = mergesort(y, perm, temp, 0, n)
     # compute ties in y after mergesort with counting
     first = 0
     v = 0
@@ -134,3 +96,45 @@ def kendalltau(np.ndarray x, np.ndarray y):
     tau = ((tot - (v + u - t)) - 2.0 * exchanges) / denom
 
     return tau
+
+@cython.boundscheck(False)
+def mergesort(np.ndarray[np.float64_t, ndim=1] y, np.ndarray[long, ndim=1] perm, np.ndarray[long, ndim=1] temp, long offs, long length):
+    cdef long exchcnt = 0
+    cdef long length0, length1, middle
+    cdef long i, j, k, d
+
+    if length == 1:
+        return 0
+    if length == 2:
+        if y[perm[offs]] <= y[perm[offs+1]]:
+            return 0
+        t = perm[offs]
+        perm[offs] = perm[offs+1]
+        perm[offs+1] = t
+        return 1
+
+    length0 = length // 2
+    length1 = length - length0
+    middle = offs + length0
+    exchcnt += mergesort(y, perm, temp, offs, length0)
+    exchcnt += mergesort(y, perm, temp, middle, length1)
+    if y[perm[middle - 1]] < y[perm[middle]]:
+        return exchcnt
+    # merging
+    i = j = k = 0
+    while j < length0 or k < length1:
+        if k >= length1 or (j < length0 and y[perm[offs + j]] <=
+                                            y[perm[middle + k]]):
+            temp[i] = perm[offs + j]
+            d = i - j
+            j += 1
+        else:
+            temp[i] = perm[middle + k]
+            d = (offs + i) - (middle + k)
+            k += 1
+        if d > 0:
+            exchcnt += d
+        i += 1
+    perm[offs:offs+length] = temp[0:length]
+    return exchcnt
+

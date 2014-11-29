@@ -13,7 +13,7 @@ gibbs = Extension('cstats.gibbs',
 setup(
         packages = ['cstats'],
         name = "cstats",
-        version = "0.1",
+        version = "0.2",
         ext_modules = [kendalltau, gibbs],
         cmdclass = {'build_ext': build_ext},
         install_requires=[
