@@ -13,6 +13,7 @@ delete = numpy.delete
 asarray = numpy.asarray
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
 def gibbs_sampling(int n, numpy.ndarray[DTYPE_t, ndim=1] mean, numpy.ndarray[DTYPE_t, ndim=2] cov, numpy.ndarray[DTYPE_t, ndim=2] bounds, int burning=0, int thinning=1):
     """Jayesh H. Kotecha and Petar M. Djuric (1999) :
     GIBBS SAMPLING APPROACH FOR GENERATION OF TRUNCATED MULTIVARIATE
