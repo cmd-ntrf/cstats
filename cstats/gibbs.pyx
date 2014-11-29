@@ -30,7 +30,7 @@ def gibbs_sampling(int n, numpy.ndarray[DTYPE_t, ndim=1] mean, numpy.ndarray[DTY
     cdef int i, j    
     for i in xrange(dim):
         sigma = delete(delete(cov, i, axis=0), i, axis=1)
-        sigma_i = delete(cov[i, :], i, 0)
+        sigma_i = delete(cov[i], i, axis=0)
         P[i] = dot(sigma_i, numpy.linalg.inv(sigma))
         sd[i] = numpy.sqrt(cov[i, i] - dot(P[i], sigma_i))
 
@@ -38,7 +38,7 @@ def gibbs_sampling(int n, numpy.ndarray[DTYPE_t, ndim=1] mean, numpy.ndarray[DTY
     cdef DTYPE_t mu_j, f_a, f_b
     for i in xrange(-burning, n*thinning):
         for j in xrange(dim):
-            mu_j = mean[j] + dot(P[j][:j], x[:j] - mean[:j]) + dot(P[j][j:], x[j+1:] - mean[j+1:])
+            mu_j = mean[j] + dot(P[j, :j], x[:j] - mean[:j]) + dot(P[j, j:], x[j+1:] - mean[j+1:])
             f_a, f_b = cdf((bounds[j] - mu_j) / sd[j])
             x[j] = mu_j + sd[j] * ppf(U[i, j] * (f_b - f_a) + f_a)
         if i >= 0:
